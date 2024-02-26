@@ -10,13 +10,29 @@ import SwiftSyntax
 public struct Property {
     public var _syntax: TokenSyntax
     public var attributes: [AttributeListElement]
-    public var isLazy: Bool
     public var keyword: String
     public var identifier: String
     public var type: Type?
     public var initialValue: Expr?
     public var accessors: [AccessorDeclSyntax]
+    public var modifiers: DeclModifierListSyntax
 
+    public var isLazy: Bool {
+        modifiers.contains { $0.name.text == "lazy" }
+    }
+    
+    public var isStatic: Bool {
+        modifiers.contains { $0.name.text == "static" }
+    }
+    
+    public var isPrivate: Bool {
+        modifiers.contains { $0.name.text == "private" }
+    }
+    
+    public var isPublic: Bool {
+        modifiers.contains { $0.name.text == "public" }
+    }
+    
     public var getter: AccessorDeclSyntax? {
         accessors.first { $0.accessorSpecifier.tokenKind == .keyword(.get) }
     }
@@ -52,7 +68,7 @@ public struct Property {
             accessors: accessors,
             attributes: attributes,
             keyword: decl._syntax.bindingSpecifier.text,
-            isLazy: decl._syntax.modifiers.contains { $0.name.text == "lazy" }
+            modifiers: decl._syntax.modifiers
         )
     }
 
@@ -63,7 +79,7 @@ public struct Property {
         accessors: [AccessorDeclSyntax],
         attributes: [AttributeListElement],
         keyword: String,
-        isLazy: Bool
+        modifiers: DeclModifierListSyntax
     ) -> [Property] {
         switch pattern.asProtocol(PatternSyntaxProtocol.self) {
             case let pattern as IdentifierPatternSyntax:
@@ -90,12 +106,12 @@ public struct Property {
                     Property(
                         _syntax: pattern.identifier,
                         attributes: attributes,
-                        isLazy: isLazy,
                         keyword: keyword,
                         identifier: pattern.identifier.text,
                         type: type,
                         initialValue: initialValue,
-                        accessors: accessors
+                        accessors: accessors,
+                        modifiers: modifiers
                     )
                 ]
             case let pattern as TuplePatternSyntax:
@@ -145,7 +161,7 @@ public struct Property {
                     // Tuple bindings can't have accessors or attributes (i.e. property wrappers or macros)
                     return properties(
                         pattern: element.pattern, initialValue: initialValue, type: type,
-                        accessors: [], attributes: [], keyword: keyword, isLazy: isLazy
+                        accessors: [], attributes: [], keyword: keyword, modifiers: modifiers
                     )
                 }
             case _ as WildcardPatternSyntax:

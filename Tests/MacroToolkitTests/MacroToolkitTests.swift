@@ -448,8 +448,8 @@ final class MacroToolkitTests: XCTestCase {
             struct MyStruct {
                 var a: String, b: Int = 2
                 @MyMacro
-                var c, d: Int
-                var e: Float {
+                private var c, d: Int
+                public var e: Float {
                     1.0
                 }
                 @MyPropertyWrapper
@@ -459,6 +459,7 @@ final class MacroToolkitTests: XCTestCase {
                 var (h, i) = (1.0, [])
                 var ((j, (k, l)), m): ((Int, (String, Float)), Int) = ((1, ("abc", 2)), 3)
                 lazy var n = [1, 2.5]
+                static var o = 35
             }
             """
 
@@ -469,7 +470,7 @@ final class MacroToolkitTests: XCTestCase {
 
         // TODO: Make exprs and types equatable, will have to decide how whitespace
         //   is treated. Easiest option would of course be to do text based comparison.
-        XCTAssertEqual(declGroup.properties.count, 14)
+        XCTAssertEqual(declGroup.properties.count, 15)
 
         /// Type annotation in a multi-binding declaration.
         let a = declGroup.properties[0]
@@ -494,12 +495,14 @@ final class MacroToolkitTests: XCTestCase {
         XCTAssertEqual(c.type?.description, "Int")
         XCTAssertEqual(c.initialValue.debugDescription, "nil")
         XCTAssertEqual(c.attributes.count, 0)
+        XCTAssertEqual(c.isPrivate, true)
         // Simple annotated binding in a multi-binding declaration.
         let d = declGroup.properties[3]
         XCTAssertEqual(d.identifier, "d")
         XCTAssertEqual(d.type?.description, "Int")
         XCTAssertEqual(d.initialValue.debugDescription, "nil")
         XCTAssertEqual(d.attributes.count, 0)
+        XCTAssertEqual(d.isPrivate, true)
 
         // Simple annotated binding in a single-binding declaration.
         let e = declGroup.properties[4]
@@ -509,6 +512,7 @@ final class MacroToolkitTests: XCTestCase {
         XCTAssertEqual(e.isStored, false)
         XCTAssert(e.getter != nil)
         XCTAssert(e.setter == nil)
+        XCTAssertEqual(e.isPublic, true)
 
         // Inferring a type from a literal.
         let f = declGroup.properties[5]
@@ -561,6 +565,10 @@ final class MacroToolkitTests: XCTestCase {
         XCTAssertEqual(n.type?.description, "Array<Double>")
         XCTAssertEqual(n.initialValue?._syntax.description, "[1, 2.5]")
         XCTAssertEqual(n.isLazy, true)
+        
+        // Static variable.
+        let o = declGroup.properties[14]
+        XCTAssertEqual(o.isStatic, true)
     }
     
     func testAsyncInterfaceMacro() throws {
